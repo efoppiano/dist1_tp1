@@ -3,17 +3,17 @@
 ## Tabla de contenidos
 
 * [Documentación](#documentación)
-  * [Scope](#scope)
-  * [Software Architecture](#software-architecture)
-  * [Architectural goals & Constraints](#architectural-goals-&-constraints)
-  * [Scenarios](#scenarios)
-  * [Logical View](#logical-view)
-    * [DAG](#dag)
-  * [Physical View](#physical-view)
-    * [Diagrama de robustez](#diagrama-de-robustez)
-    * [Diagrama de despliegue](#diagrama-de-despliegue)
-  * [Process View](#process-view)
-    * [Diagrama de actividad](#diagrama-de-actividad)
+    * [Scope](#scope)
+    * [Software Architecture](#software-architecture)
+    * [Architectural goals & Constraints](#architectural-goals-&-constraints)
+    * [Scenarios](#scenarios)
+    * [Logical View](#logical-view)
+        * [DAG](#dag)
+    * [Physical View](#physical-view)
+        * [Diagrama de robustez](#diagrama-de-robustez)
+        * [Diagrama de despliegue](#diagrama-de-despliegue)
+    * [Process View](#process-view)
+        * [Diagrama de actividad](#diagrama-de-actividad)
 
 ## Documentación
 
@@ -25,11 +25,11 @@ realizados con bicicletas de la red pública provista por grandes ciudades.
 Se deben generar los siguientes reportes:
 
 - La duración promedio de viajes que iniciaron en días con
-precipitaciones >30mm.
+  precipitaciones >30mm.
 - Los nombres de estaciones que al menos duplicaron la cantidad de
-viajes iniciados en ellas entre 2016 y el 2017.
+  viajes iniciados en ellas entre 2016 y el 2017.
 - Los nombres de estaciones de Montreal para la que el promedio de
-los ciclistas recorren más de 6km en llegar a ellas.
+  los ciclistas recorren más de 6km en llegar a ellas.
 
 ### Software Architecture
 
@@ -40,7 +40,7 @@ RabbitMQ.
 ### Architectural goals & Constraints
 
 - **Escalabilidad**: Se debe soportar el incremento de los elementos de cómputo para
-escalar los volúmenes de información a procesar.
+  escalar los volúmenes de información a procesar.
 - **Mantenibilidad**: La comunicación de grupos debe encapsularse en un middleware.
 
 ### Scenarios
@@ -60,8 +60,7 @@ DAG global del sistema.
 En el diagrama se puede observar la división de responsabilidades entre los distintos componentes
 del sistema. En primer lugar, el Gateway se encarga de distribuir la información recibida del cliente,
 entre los aggregators. Cada aggregator opera con una side table que contiene un pequeño conjunto de
-datos estáticos. Por ejemplo, `WA Weather Aggregator` contiene la información climática de
-Washington.
+datos estáticos.
 
 Para disminuir el tamaño de los mensajes que debe procesar RabbitMQ, el Gateway poda todos los
 campos que no son necesarios para calcular los reportes.
@@ -73,24 +72,31 @@ La información de las side tables se ingresa al sistema mediante un mecanismo d
 permitir que varias réplicas de los aggregators puedan construir sus side tables.
 Esto favorece la escalabilidad del sistema, a costa de duplicar la información en cada réplica.
 
-
 ### Physical View
 
 #### Diagrama de robustez
 
-![robustness_diagram](docs/robustness.png)
+![robustness_diagram_1](docs/robustness_1.png)
 
 Diagrama de robustez del sistema.
 
-Como se puede ver, tanto los aggregators, como los filtros y distance calculators, se pueden
-escalar horizontalmente.
-Los providers, por otro lado, realizan tareas que requieren información de un conjunto de datos
-de los viajes, por lo que consisten en una sola instancia. Por ejemplo, el `Avg Provider`, encargado
-de satisfacer el primer reporte, debe tener la información de todos los viajes de un determinado día,
-para poder calcular el promedio. Si se realizara un escalado de la misma forma que los otros
-componentes, existiría la posibilidad de que varias instancias calculen un promedio parcial, lo cual
-no es correcto.
+Como se puede ver, varias entidades del sistema pueden ser replicadas, para permitir un escalado
+horizontal.
 
+Algunas entidades poseen el estereotipo `<<City Affinity>>`. Esto quiere decir que, para dicha entidad,
+existirá un nodo por cada ciudad. Por ejemplo, se deben desplegar tres instancias de `Dist Mean Calculator`.
+
+Los aggregators, ademas de tener affinity con una ciudad, pueden replicarse. Por ejemplo, pueden desplegarse
+3 `Weather Aggregator` para Washington, y 2 `Weather Aggregator` para Montreal.
+
+![robustness_diagram_2](docs/robustness_2.png)
+
+Diagrama de robustez del servidor, con información de cada una de las queues.
+
+En el diagrama anterior se observa la forma en que se distribuyen los mensajes entre los distintos
+componentes del sistema. Además, se puede ver el mecanismo por el cual se dividen los mensajes en aquellos
+nodos que poseen `<<City Affinity>>`: el nombre de la queue inicia con el nombre de la ciudad, seguido de un
+guión bajo.
 
 #### Diagrama de despliegue
 
@@ -100,9 +106,8 @@ Diagrama de despliegue del sistema.
 
 Este diagrama pone en evidencia la fuerte dependencia que existe entre RabbitMQ (Message Queue) y
 los diferentes componentes del sistema.
-Para alivianar la carga del broker, el cliente y el Gateway se comunican directamente entre sí. 
+Para alivianar la carga del broker, el cliente y el Gateway se comunican directamente entre sí.
 Cada nodo puede desplegarse de manera independiente.
-
 
 ### Process View
 
@@ -119,18 +124,16 @@ El `Weather Aggregator` necesita la información climática para armar su side t
 procesar la información de los viajes hasta que no reciba todos los datos del clima.
 Lo mismo sucede con el `Station Aggregator`, que necesita la información de las estaciones.
 
-
 ![activity_diagram_2](docs/activity_2.png)
 
-Diagrama de actividad de la comunicación entre el `Station Aggregator`, `Prec Filter` y `Avg Provider`.
+Diagrama de actividad de la comunicación del `Station Aggregator` con el `Prec Filter` y `Distance Calculator`.
 
-En el diagrama se visualiza como se resuelve el primer reporte, desde el momento en que se termina de
-agregar la información de las estaciones y el clima.
+En el diagrama se visualiza cómo se comunica la información, desde el momento en que se termina de agregar
+la información de las estaciones y el clima, hasta que se envía al primer conjunto de filtros y calculators.
 
-Para los otros dos reportes, el mecanismo es muy similar: el aggregator envía la información del viaje a
-una entidad que se puede escalar (`Year Filter` o `Distance Calculator`), y ésta a su vez la envía al provider
-correspondiente (`Dist Mean Provider` o `TripsCount Provider`).
-
+Se ve que, tanto el `Prec Filter` como el `Distance Calculator`, pueden realizar su trabajo utilizando
+exclusivamente la información del paquete que acaban de recibir, por lo que el escalado de éstas entidades
+es muy sencillo.
 
 
 
