@@ -1,47 +1,47 @@
 import abc
+import json
+import logging
+import os
 from abc import ABC
-from typing import Union
+from typing import List, Dict
 
-import pika
-from pika import BasicProperties
-from pika.adapters.blocking_connection import BlockingChannel
+from common.rabbit_middleware import Rabbit
+from common.utils import build_eof_out_queue_name, build_queue_name
+
+RABBIT_HOST = os.environ.get("RABBIT_HOST", "rabbitmq")
 
 
 class BasicFilter(ABC):
-    def __init__(self, input_queue: str, output_queue: str):
-        self._input_queue = input_queue
-        self._output_queue = output_queue
+    def __init__(self, input_queue_name: str, replica_id: int):
+        self._input_queue = build_queue_name(input_queue_name, replica_id)
+        self._rabbit = Rabbit(RABBIT_HOST)
+        self._rabbit.consume(self._input_queue, self.__on_message_callback)
+        self._rabbit.route(self._input_queue, "control", build_eof_out_queue_name(input_queue_name))
 
-        self.__initialize_filter()
+    def __on_message_callback(self, msg: bytes) -> bool:
+        msg = json.loads(msg)
+        if msg["type"] == "eof":
+            outgoing_messages = self.handle_eof(msg["payload"].encode())
+        else:  # type == "data"
+            outgoing_messages = self.handle_message(msg["payload"].encode())
 
-    def __initialize_filter(self):
-        self._connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host='rabbitmq'))
-        self._channel = self._connection.channel()
-
-        self._channel.queue_declare(queue=self._input_queue, durable=True)
-        self._channel.queue_declare(queue=self._output_queue, durable=True)
-        self._channel.basic_qos(prefetch_count=1)
-        self._channel.basic_consume(queue=self._input_queue, on_message_callback=self.__on_message_callback)
-
-    def __on_message_callback(self, ch: BlockingChannel, method, properties: BasicProperties, body: bytes):
-        outgoing_message = self.handle_message(body)
-
-        if outgoing_message is not None:
-            self._channel.basic_publish(
-                exchange='',
-                routing_key=self._output_queue,
-                body=outgoing_message,
-                properties=pika.BasicProperties(
-                    delivery_mode=2
-                ))
-
-        ch.basic_ack(delivery_tag=method.delivery_tag)
+        for (queue, messages) in outgoing_messages.items():
+            for message in messages:
+                logging.info(f"action: filter_send_message | queue: {queue} | message: {message}")
+                message = {
+                    "type": "data",
+                    "payload": message.decode("utf-8")
+                }
+                self._rabbit.produce(queue, json.dumps(message).encode())
+        return True
 
     @abc.abstractmethod
-    def handle_message(self, message: bytes) -> Union[bytes, None]:
+    def handle_message(self, message: bytes) -> Dict[str, List[bytes]]:
+        pass
+
+    @abc.abstractmethod
+    def handle_eof(self, message: bytes) -> Dict[str, List[bytes]]:
         pass
 
     def start(self):
-        self._channel.start_consuming()
-
+        self._rabbit.start()

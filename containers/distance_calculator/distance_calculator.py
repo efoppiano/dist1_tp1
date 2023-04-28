@@ -1,24 +1,51 @@
 #!/usr/bin/env python3
 import logging
-from typing import Union
+import os
+from typing import Dict, List
 from haversine import haversine
 
 from common.basic_filter import BasicFilter
-from common.packets.distance_calc_info import DistanceCalcInfo
-from common.packets.distance_info import DistanceInfo
-from common.utils import initialize_log
+from common.packets.dist_info import DistInfo
+from common.packets.distance_calc_in import DistanceCalcIn
+from common.packets.eof import Eof
+from common.utils import initialize_log, build_prefixed_queue_name, build_queue_name, build_hashed_queue_name, \
+    build_eof_in_queue_name
+
+INPUT_QUEUE = os.environ["INPUT_QUEUE"]
+OUTPUT_QUEUE = os.environ["OUTPUT_QUEUE"]
+OUTPUT_AMOUNT = os.environ["OUTPUT_AMOUNT"]
+REPLICA_ID = os.environ["REPLICA_ID"]
 
 
 class DistanceCalculator(BasicFilter):
-    def handle_message(self, message: bytes) -> Union[bytes, None]:
-        packet = DistanceCalcInfo.decode(message)
-        logging.info("start_station_name: {}".format(packet.start_station_name))
+    def __init__(self, config: Dict[str, str]):
+        super().__init__(config["input_queue"], int(config["replica_id"]))
 
-        distance_km = self.__calculate_distance(packet.start_station_latitude, packet.start_station_longitude,
-                                                packet.end_station_latitude, packet.end_station_longitude)
+        self._output_queue = config["output_queue"]
+        self._output_amount = int(config["output_amount"])
 
-        logging.info("distance: {}".format(distance_km))
-        return DistanceInfo(packet.start_station_name, distance_km).encode()
+    def handle_eof(self, message: bytes) -> Dict[str, List[bytes]]:
+        city_name = message.decode("utf-8")
+        eof_output_queue = build_eof_in_queue_name(self._output_queue)
+        return {
+            eof_output_queue: [Eof(city_name).encode()]
+        }
+
+    def handle_message(self, message: bytes) -> Dict[str, List[bytes]]:
+        packet = DistanceCalcIn.decode(message)
+
+        output_queue = build_hashed_queue_name(self._output_queue,
+                                               packet.start_station_name,
+                                               self._output_amount)
+        distance = self.__calculate_distance(packet.start_station_latitude,
+                                             packet.start_station_longitude,
+                                             packet.end_station_latitude,
+                                             packet.end_station_longitude)
+        return {
+            output_queue: [DistInfo(packet.city_name,
+                                    packet.start_station_name,
+                                    distance).encode()]
+        }
 
     @staticmethod
     def __calculate_distance(start_station_latitude: float, start_station_longitude: float,
@@ -28,8 +55,13 @@ class DistanceCalculator(BasicFilter):
 
 
 def main():
-    initialize_log(logging.DEBUG)
-    filter = DistanceCalculator("distance_calc_in", "distance_calc_out")
+    initialize_log(logging.INFO)
+    filter = DistanceCalculator({
+        "input_queue": INPUT_QUEUE,
+        "output_queue": OUTPUT_QUEUE,
+        "output_amount": OUTPUT_AMOUNT,
+        "replica_id": REPLICA_ID
+    })
     filter.start()
 
 

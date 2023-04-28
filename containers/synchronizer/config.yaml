@@ -1,0 +1,64 @@
+washington_gateway_in_eof_in:
+  eof_output: washington_gateway_in_eof_out
+  eofs_to_wait: 1
+montreal_gateway_in_eof_in:
+  eof_output: montreal_gateway_in_eof_out
+  eofs_to_wait: 1
+toronto_gateway_in_eof_in:
+  eof_output: toronto_gateway_in_eof_out
+  eofs_to_wait: 1
+
+washington_gateway_out_eof_in:
+  eof_output: washington_gateway_out_eof_out
+  eofs_to_wait: 1
+montreal_gateway_out_eof_in:
+  eof_output: montreal_gateway_out_eof_out
+  eofs_to_wait: 1
+toronto_gateway_out_eof_in:
+  eof_output: toronto_gateway_out_eof_out
+  eofs_to_wait: 1
+
+prec_filter_in_eof_in:
+  eof_output: prec_filter_in_eof_out
+  eofs_to_wait: 1
+  by_city: true
+distance_calc_in_eof_in:
+  eof_output: distance_calc_in_eof_out
+  eofs_to_wait: 1
+  by_city: true
+year_filter_in_eof_in:
+  eof_output: year_filter_in_eof_out
+  eofs_to_wait: 1
+  by_city: true
+prec_filtered_eof_in:
+  eof_output: prec_filtered_eof_out
+  eofs_to_wait: 1
+  by_city: true
+year_filtered_eof_in:
+  eof_output: year_filtered_eof_out
+  eofs_to_wait: 1
+  by_city: true
+distance_eof_in:
+  eof_output: distance_eof_out
+  eofs_to_wait: 1
+  by_city: true
+distance_mean_eof_in:
+  eof_output: distance_mean_eof_out
+  eofs_to_wait: 1
+  by_city: true
+trips_counted_eof_in:
+  eof_output: trips_counted_eof_out
+  eofs_to_wait: 1
+  by_city: true
+dist_mean_provider_eof_in:
+  eof_output: dist_mean_provider_eof_out
+  eofs_to_wait: 1
+  by_city: true
+trip_count_provider_eof_in:
+  eof_output: trip_count_provider_eof_out
+  eofs_to_wait: 1
+  by_city: true
+avg_provider_eof_in:
+  eof_output: avg_provider_eof_out
+  eofs_to_wait: 1
+  by_city: true
