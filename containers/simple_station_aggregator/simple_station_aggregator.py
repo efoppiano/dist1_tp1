@@ -46,8 +46,8 @@ class SimpleStationAggregator(BasicAggregator):
         eof_prec_filter_in_queue = build_eof_in_queue_name(self._prec_filter_in_queue_name)
 
         return {
-            eof_year_filter_in_queue: [Eof(self._city_name).encode()],
-            eof_prec_filter_in_queue: [Eof(self._city_name).encode()]
+            eof_year_filter_in_queue: [self._city_name.encode()],
+            eof_prec_filter_in_queue: [self._city_name.encode()]
         }
 
     def __assert_station_name_exists(self, station_code: int, yearid: int):

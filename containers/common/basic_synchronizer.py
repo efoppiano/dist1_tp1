@@ -1,4 +1,5 @@
 import abc
+import base64
 import json
 import logging
 import os
@@ -8,6 +9,7 @@ from typing import List, Dict
 from common.rabbit_middleware import Rabbit
 
 RABBIT_HOST = os.environ.get("RABBIT_HOST", "rabbitmq")
+CHUNK_SIZE = 1024
 
 
 class BasicSynchronizer(ABC):
@@ -18,9 +20,23 @@ class BasicSynchronizer(ABC):
             self._rabbit.consume(input_queue,
                                  lambda msg, input_queue=input_queue: self.__on_message_callback(input_queue, msg))
 
+    def __handle_chunk(self, input_queue: str, chunk: List[str]) -> Dict[str, List[bytes]]:
+        outgoing_messages = {}
+        for message in chunk:
+            responses = self.handle_message(input_queue, message.encode())
+            for (queue, messages) in responses.items():
+                outgoing_messages.setdefault(queue, [])
+                outgoing_messages[queue] += messages
+        return outgoing_messages
+
     def __on_message_callback(self, queue: str, msg: bytes) -> bool:
-        msg_data = json.loads(msg)["payload"]
-        outgoing_messages = self.handle_message(queue, msg_data.encode())
+        msg = json.loads(msg)
+        if msg["type"] == "eof" or msg["type"] == "data":
+            msg_data = msg["payload"]
+            outgoing_messages = self.handle_message(queue, msg_data.encode())
+        else:  # chunk
+            chunk = json.loads(msg["payload"])
+            outgoing_messages = self.__handle_chunk(queue, chunk)
 
         for (routing_key, messages) in outgoing_messages.items():
             for message in messages:

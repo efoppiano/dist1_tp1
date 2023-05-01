@@ -37,8 +37,8 @@ class DistMeanCalculator(BasicFilter):
             output[queue].append(StationDistMean(city_name,
                                                  start_station_name,
                                                  data["mean"]).encode())
-
-        output[eof_output_queue] = [Eof(city_name).encode()]
+        self._buffer.pop(city_name)
+        output[eof_output_queue] = [message]
         return output
 
     def handle_message(self, message: bytes) -> Dict[str, List[bytes]]:
@@ -54,9 +54,11 @@ class DistMeanCalculator(BasicFilter):
         new_count = old_count + 1
         new_mean = (old_mean * old_count + packet.distance_km) / new_count
 
+        """
         logging.info(
             f"action: dist_mean_calculated | city_name: {city_name} | start_station_name: {packet.start_station_name} |"
             f" mean: {new_mean}")
+        """
         self._buffer[city_name][packet.start_station_name]["mean"] = new_mean
         self._buffer[city_name][packet.start_station_name]["count"] = new_count
 

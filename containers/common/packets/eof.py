@@ -1,3 +1,4 @@
+import json
 from dataclasses import dataclass
 from typing import Union
 
@@ -8,13 +9,18 @@ class Eof:
 
     @classmethod
     def decode(cls, data: bytes) -> "Eof":
-        if data == b'eof':
-            return Eof()
-        else:
-            return Eof(data.decode())
+        decoded_data = json.loads(data)
+        data = decoded_data["payload"]
+        return Eof(data)
 
     def encode(self) -> bytes:
         if self.city_name is None:
-            return b'eof'
+            return json.dumps({
+                "type": "eof",
+                "payload": ""
+            }).encode()
         else:
-            return self.city_name.encode()
+            return json.dumps({
+                "type": "eof",
+                "payload": self.city_name
+            }).encode()

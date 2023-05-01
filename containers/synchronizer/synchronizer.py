@@ -29,45 +29,21 @@ class Synchronizer(BasicSynchronizer):
         logging.info(f"Received EOF from {queue} - {message}")
         output = {}
 
-        self._config[queue].setdefault("by_city", False)
-        if self._config[queue]["by_city"]:
-            self._eofs_received.setdefault(queue, {})
-            city_name = message.decode()
-            self._eofs_received[queue].setdefault(city_name, 0)
-            self._eofs_received[queue][city_name] += 1
-            if self._eofs_received[queue][city_name] == self._config[queue]["eofs_to_wait"]:
-                eof_output_queue = self._config[queue]["eof_output"]
-                logging.info(f"Sending EOF to {eof_output_queue}")
-                output[eof_output_queue] = [Eof().encode()]
-        else:
-            self._config[queue]["eofs_to_wait"] -= 1
-            if self._config[queue]["eofs_to_wait"] == 0:
-                eof_output_queue = self._config[queue]["eof_output"]
-                logging.info(f"Sending EOF to {eof_output_queue}")
-                output[eof_output_queue] = [Eof().encode()]
-
-        return output
-
-    """
-    def handle_message(self, queue: str, message: bytes) -> Dict[str, List[bytes]]:
-        logging.info(f"Received EOF from {queue} - {message}")
-        output = {}
-        if isinstance(self._config[queue]["eofs_to_wait"], int):
-            self._config[queue]["eofs_to_wait"] -= 1
-            if self._config[queue]["eofs_to_wait"] == 0:
-                eof_output_queue = self._config[queue]["eof_output"]
-                logging.info(f"Sending EOF to {eof_output_queue}")
-                output[eof_output_queue] = [Eof().encode()]
-        elif isinstance(self._config[queue]["eofs_to_wait"], dict):
+        if isinstance(self._config[queue]["eofs_to_wait"], dict):
             city_name = message.decode()
             self._config[queue]["eofs_to_wait"][city_name] -= 1
             if self._config[queue]["eofs_to_wait"][city_name] == 0:
                 eof_output_queue = self._config[queue]["eof_output"]
                 logging.info(f"Sending EOF to {eof_output_queue}")
-                output[eof_output_queue] = [Eof(city_name).encode()]
+                output[eof_output_queue] = [message]
+        else:
+            self._config[queue]["eofs_to_wait"] -= 1
+            if self._config[queue]["eofs_to_wait"] == 0:
+                eof_output_queue = self._config[queue]["eof_output"]
+                logging.info(f"Sending EOF to {eof_output_queue}")
+                output[eof_output_queue] = ["".encode()]
 
         return output
-    """
 
 
 def main():
@@ -76,30 +52,6 @@ def main():
         config = yaml.safe_load(f)
 
     synchronizer = Synchronizer(config)
-    """
-    synchronizer = Synchronizer([
-        SyncPoint(
-            input_queue="washington_gateway_in",
-            eofs_expected=1,
-            output_msg=Eof().encode()
-        ),
-        SyncPoint(
-            input_queue="washington_gateway_out",
-            eofs_expected=1,
-            output_msg=Eof(city_name="wasington").encode()
-        ),
-        SyncPoint(
-            input_queue="washington_prec_filter_in",
-            eofs_expected=1,
-            output_msg=Eof("washington").encode()
-        ),
-        SyncPoint(
-            input_queue="washington_prec_filter_in",
-            eofs_expected=1,
-            output_msg=Eof("washington").encode()
-        ),
-    ])
-    """
     synchronizer.start()
 
 

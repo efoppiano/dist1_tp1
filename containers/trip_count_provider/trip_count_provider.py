@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import logging
 import os
+import signal
+import time
 from typing import Dict, List
 
 from common.basic_filter import BasicFilter
@@ -24,7 +26,7 @@ class TripCountProvider(BasicFilter):
     def handle_eof(self, message: bytes) -> Dict[str, List[bytes]]:
         eof_output_queue = build_eof_in_queue_name(self._output_queue)
         return {
-            eof_output_queue: [Eof().encode()]
+            eof_output_queue: [message]
         }
 
     def handle_message(self, message: bytes) -> Dict[str, List[bytes]]:
@@ -39,6 +41,7 @@ class TripCountProvider(BasicFilter):
 
 def main():
     initialize_log(logging.INFO)
+
     filter = TripCountProvider({
         "input_queue": INPUT_QUEUE,
         "output_queue": OUTPUT_QUEUE,

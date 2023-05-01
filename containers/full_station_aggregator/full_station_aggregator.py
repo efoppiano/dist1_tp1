@@ -10,7 +10,7 @@ from common.packets.full_station_side_table_info import FullStationSideTableInfo
 from common.packets.gateway_out import GatewayOut
 from common.packets.prec_filter_in import PrecFilterIn
 from common.packets.year_filter_in import YearFilterIn
-from common.utils import initialize_log, build_prefixed_queue_name, build_eof_in_queue_name
+from common.utils import initialize_log, build_prefixed_queue_name, build_eof_in_queue_name, build_hashed_queue_name
 
 CITY_NAME = os.environ["CITY_NAME"]
 INPUT_QUEUE_SUFFIX = os.environ["INPUT_QUEUE_SUFFIX"]
@@ -45,9 +45,9 @@ class FullStationAggregator(BasicAggregator):
         eof_distance_calc_in_queue = build_eof_in_queue_name(self._distance_calc_in_queue_name)
 
         return {
-            eof_year_filter_in_queue: [Eof(self._city_name).encode()],
-            eof_prec_filter_in_queue: [Eof(self._city_name).encode()],
-            eof_distance_calc_in_queue: [Eof(self._city_name).encode()],
+            eof_year_filter_in_queue: [self._city_name.encode()],
+            eof_prec_filter_in_queue: [self._city_name.encode()],
+            eof_distance_calc_in_queue: [self._city_name.encode()],
         }
 
     def handle_side_table_message(self, message: bytes):
@@ -60,15 +60,22 @@ class FullStationAggregator(BasicAggregator):
             "longitude": packet.longitude,
         }
 
-    def __assert_station_name_exists(self, station_code: int, yearid: int):
+    def __check_station_name_exists(self, station_code: int, yearid: int) -> bool:
         if (station_code, yearid) not in self._stations:
-            raise ValueError(f"Station name not found for station code {station_code} and yearid {yearid}")
+            logging.warning(f"Station name not found for station code {station_code} and yearid {yearid}")
+            return False
+        return True
 
     def handle_message(self, message: bytes) -> Dict[str, List[bytes]]:
         packet = GatewayOut.decode(message)
 
-        self.__assert_station_name_exists(packet.start_station_code, packet.yearid)
-        self.__assert_station_name_exists(packet.end_station_code, packet.yearid)
+        check_1 = self.__check_station_name_exists(packet.start_station_code,
+                                                   packet.yearid)
+        check_2 = self.__check_station_name_exists(packet.end_station_code,
+                                                   packet.yearid)
+
+        if not check_1 or not check_2:
+            return {}
 
         start_station_info = self._stations[(packet.start_station_code, packet.yearid)]
         end_station_info = self._stations[(packet.end_station_code, packet.yearid)]
@@ -91,10 +98,17 @@ class FullStationAggregator(BasicAggregator):
             end_station_info["longitude"],
         )
 
+        prec_filter_in_queue = build_hashed_queue_name(self._prec_filter_in_queue_name, str(packet.start_station_code),
+                                                       self._prec_filter_amount)
+        year_filter_in_queue = build_hashed_queue_name(self._year_filter_in_queue_name, str(packet.start_station_code),
+                                                       self._year_filter_amount)
+        distance_calc_in_queue = build_hashed_queue_name(self._distance_calc_in_queue_name,
+                                                         str(packet.start_station_code), self._distance_calc_amount)
+
         return {
-            self._prec_filter_in_queue_name: [prec_filter_in_packet.encode()],
-            self._year_filter_in_queue_name: [year_filter_in_packet.encode()],
-            self._distance_calc_in_queue_name: [distance_calc_in_packet.encode()],
+            prec_filter_in_queue: [prec_filter_in_packet.encode()],
+            year_filter_in_queue: [year_filter_in_packet.encode()],
+            distance_calc_in_queue: [distance_calc_in_packet.encode()],
         }
 
 

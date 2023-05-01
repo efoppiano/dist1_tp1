@@ -1,9 +1,11 @@
 import json
 from dataclasses import dataclass
 
+from common.packets.basic_packet import BasicPacket
+
 
 @dataclass
-class DistanceCalcIn:
+class DistanceCalcIn(BasicPacket):
     city_name: str
 
     start_station_name: str

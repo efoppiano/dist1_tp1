@@ -1,20 +1,10 @@
-import json
 from dataclasses import dataclass
+
+from common.packets.basic_packet import BasicPacket
 
 
 @dataclass
-class DurAvgOut:
+class DurAvgOut(BasicPacket):
     city_name: str
     start_date: str
-    mean_duration_sec: float
-
-    @classmethod
-    def decode(cls, data: bytes) -> "DurAvgOut":
-        data = json.loads(data)
-        city_name = data["city_name"]
-        start_date = data["start_date"]
-        mean_duration_sec = data["mean_duration_sec"]
-        return DurAvgOut(city_name, start_date, mean_duration_sec)
-
-    def encode(self) -> bytes:
-        return json.dumps(self.__dict__).encode()
+    dur_avg_sec: float

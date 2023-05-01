@@ -6,4 +6,4 @@ COPY synchronizer/synchronizer.py /opt/app/synchronizer.py
 COPY synchronizer/config.yaml /opt/app/config.yaml
 COPY common /opt/app/common
 
-ENTRYPOINT python3 /opt/app/synchronizer.py
+ENTRYPOINT ["/bin/bash"]

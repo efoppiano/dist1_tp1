@@ -1,3 +1,8 @@
+import logging
+import os
+import signal
+import threading
+import time
 from typing import Callable, Union
 
 import pika
@@ -8,13 +13,29 @@ from common.message_queue import MessageQueue
 class Rabbit(MessageQueue):
 
     def __init__(self, host: str):
-        self._connection = pika.BlockingConnection(
+        self.connection = pika.BlockingConnection(
             pika.ConnectionParameters(host=host))
-        self._channel = self._connection.channel()
+        self._channel = self.connection.channel()
         self._channel.basic_qos(prefetch_count=1)
-
         self._declared_exchanges = []
         self._declared_queues = []
+        self._consume_one_last_queue = None
+
+        self.__set_up_signal_handler()
+        self._pika_thread = None
+
+    def close(self):
+        self.connection.close()
+        if self._sig_hand_prev:
+            self._sig_hand_prev(signal.SIGTERM, None)
+        logging.info("action: rabbit_close | status: success")
+
+    def __set_up_signal_handler(self):
+        def signal_handler(_sig, _frame):
+            logging.info("action: rabbit_close | status: in_progress")
+            self.connection.add_callback_threadsafe(self.close)
+
+        self._sig_hand_prev = signal.signal(signal.SIGTERM, signal_handler)
 
     def publish(self, event: str, message: bytes):
         self.__declare_exchange(event, "fanout")
@@ -61,6 +82,19 @@ class Rabbit(MessageQueue):
         self.declare_queue(queue)
         self._channel.basic_consume(queue=queue, on_message_callback=self.__callback_wrapper(callback), auto_ack=False)
 
+    def consume_one(self, queue: str, callback: Callable[[bytes], bool]):
+        if queue != self._consume_one_last_queue:
+            self._consume_one_last_queue = queue
+            self._channel.cancel()
+
+        self.declare_queue(queue)
+        for (method, _, msg) in self._channel.consume(queue=queue, auto_ack=False):
+            if callback(msg):
+                self._channel.basic_ack(delivery_tag=method.delivery_tag)
+                break
+            else:
+                self._channel.basic_nack(delivery_tag=method.delivery_tag)
+
     def produce(self, queue: str, message: bytes):
         self.declare_queue(queue)
         self._channel.basic_publish(
@@ -71,8 +105,12 @@ class Rabbit(MessageQueue):
                 delivery_mode=2
             ))
 
+    def call_later(self, seconds: float, callback: Callable[[], None]):
+        self.connection.call_later(seconds, callback)
+
     def start(self):
-        self._channel.start_consuming()
+        self._pika_thread = threading.Thread(target=self._channel.start_consuming)
+        self._pika_thread.start()
 
     def declare_queue(self, queue: str):
         if queue not in self._declared_queues:

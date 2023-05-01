@@ -29,10 +29,10 @@ class AvgProvider(BasicFilter):
         for start_date in self._buffer[city_name]:
             avg = self._buffer[city_name][start_date]["avg"]
             city_output.append(DurAvgOut(city_name, start_date, avg).encode())
-
+        self._buffer.pop(city_name)
         return {
             self._output_queue: city_output,
-            eof_output_queue: [Eof().encode()],
+            eof_output_queue: [message],
         }
 
     def handle_message(self, message: bytes) -> Dict[str, List[bytes]]:
@@ -44,9 +44,6 @@ class AvgProvider(BasicFilter):
         old_count = self._buffer[packet.city_name][packet.start_date]["count"]
         new_count = old_count + 1
         new_avg = (old_avg * old_count + packet.duration_sec) / new_count
-        logging.info(
-            f"action: dur_avg_calculated | city_name: {packet.city_name} | start_date: {packet.start_date} |"
-            f" avg: {new_avg}")
         self._buffer[packet.city_name][packet.start_date]["avg"] = new_avg
         self._buffer[packet.city_name][packet.start_date]["count"] = new_count
 

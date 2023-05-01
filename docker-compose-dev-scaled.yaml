@@ -22,19 +22,16 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    entrypoint: python3 /opt/app/gateway.py
     environment:
       - WASHINGTON_OUTPUT_AMOUNT=2
       - TORONTO_OUTPUT_AMOUNT=2
       - MONTREAL_OUTPUT_AMOUNT=2
-
 
   response_provider:
     container_name: response_provider
     build:
       context: ./containers
       dockerfile: response_provider/Dockerfile
-    entrypoint: python3 /opt/app/response_provider.py
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -43,15 +40,8 @@ services:
     build:
       context: ./containers
       dockerfile: client/Dockerfile
-    entrypoint: python3 /opt/app/client.py
     depends_on:
       - gateway
-    environment:
-      - DATA_FOLDER_PATH=/opt/app/.data
-      - PUSH_ADDR=tcp://gateway:5555
-      - REQ_ADDR=tcp://response_provider:5555
-      - CITIES_WITH_GEODATA=montreal
-      - CITIES_WITHOUT_GEODATA=washington,toronto
     volumes:
       - ./.data/:/opt/app/.data/
 
@@ -59,7 +49,6 @@ services:
     build:
       context: ./containers
       dockerfile: synchronizer/Dockerfile
-    entrypoint: python3 /opt/app/synchronizer.py
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -71,7 +60,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    entrypoint: python3 /opt/app/weather_aggregator.py
     environment:
       - CITY_NAME=washington
       - INPUT_QUEUE_SUFFIX=gateway_in
@@ -87,7 +75,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    entrypoint: python3 /opt/app/weather_aggregator.py
     environment:
       - CITY_NAME=washington
       - INPUT_QUEUE_SUFFIX=gateway_in
@@ -103,7 +90,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    entrypoint: python3 /opt/app/weather_aggregator.py
     environment:
       - CITY_NAME=toronto
       - INPUT_QUEUE_SUFFIX=gateway_in
@@ -119,7 +105,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    entrypoint: python3 /opt/app/weather_aggregator.py
     environment:
       - CITY_NAME=toronto
       - INPUT_QUEUE_SUFFIX=gateway_in
@@ -135,7 +120,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    entrypoint: python3 /opt/app/weather_aggregator.py
     environment:
       - CITY_NAME=montreal
       - INPUT_QUEUE_SUFFIX=gateway_in
@@ -151,7 +135,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    entrypoint: python3 /opt/app/weather_aggregator.py
     environment:
       - CITY_NAME=montreal
       - INPUT_QUEUE_SUFFIX=gateway_in
@@ -167,7 +150,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    entrypoint: python3 /opt/app/simple_station_aggregator.py
     environment:
       - CITY_NAME=washington
       - INPUT_QUEUE_SUFFIX=gateway_out
@@ -185,7 +167,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    entrypoint: python3 /opt/app/simple_station_aggregator.py
     environment:
       - CITY_NAME=washington
       - INPUT_QUEUE_SUFFIX=gateway_out
@@ -203,7 +184,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    entrypoint: python3 /opt/app/simple_station_aggregator.py
     environment:
       - CITY_NAME=toronto
       - INPUT_QUEUE_SUFFIX=gateway_out
@@ -221,7 +201,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    entrypoint: python3 /opt/app/simple_station_aggregator.py
     environment:
       - CITY_NAME=toronto
       - INPUT_QUEUE_SUFFIX=gateway_out
@@ -239,7 +218,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    entrypoint: python3 /opt/app/full_station_aggregator.py
     environment:
       - CITY_NAME=montreal
       - INPUT_QUEUE_SUFFIX=gateway_out
@@ -248,7 +226,7 @@ services:
       - YEAR_FILTER_IN_QUEUE_NAME=year_filter_in
       - YEAR_FILTER_AMOUNT=2
       - DISTANCE_CALC_IN_QUEUE_NAME=distance_calc_in
-      - DISTANCE_CALC_AMOUNT=2
+      - DISTANCE_CALC_AMOUNT=1
       - REPLICA_ID=0
       - SIDE_TABLE_QUEUE_SUFFIX=station
 
@@ -259,7 +237,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    entrypoint: python3 /opt/app/full_station_aggregator.py
     environment:
       - CITY_NAME=montreal
       - INPUT_QUEUE_SUFFIX=gateway_out
@@ -268,7 +245,7 @@ services:
       - YEAR_FILTER_IN_QUEUE_NAME=year_filter_in
       - YEAR_FILTER_AMOUNT=2
       - DISTANCE_CALC_IN_QUEUE_NAME=distance_calc_in
-      - DISTANCE_CALC_AMOUNT=2
+      - DISTANCE_CALC_AMOUNT=1
       - REPLICA_ID=1
       - SIDE_TABLE_QUEUE_SUFFIX=station
 
@@ -279,7 +256,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    entrypoint: python3 /opt/app/prec_filter.py
     environment:
       - INPUT_QUEUE=prec_filter_in
       - OUTPUT_QUEUE=prec_filtered
@@ -294,11 +270,10 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    entrypoint: python3 /opt/app/prec_filter.py
     environment:
       - INPUT_QUEUE=prec_filter_in
       - OUTPUT_QUEUE=prec_filtered
-      - OUTPUT_AMOUNT=2
+      - OUTPUT_AMOUNT=1
       - PREC_LIMIT=30
       - REPLICA_ID=1
 
@@ -309,7 +284,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    entrypoint: python3 /opt/app/dur_avg_provider.py
     environment:
       - INPUT_QUEUE=prec_filtered
       - OUTPUT_QUEUE=avg_provider
@@ -322,7 +296,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    entrypoint: python3 /opt/app/dur_avg_provider.py
     environment:
       - INPUT_QUEUE=prec_filtered
       - OUTPUT_QUEUE=avg_provider
@@ -335,7 +308,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    entrypoint: python3 /opt/app/distance_calculator.py
     environment:
       - INPUT_QUEUE=distance_calc_in
       - OUTPUT_QUEUE=distance
@@ -349,7 +321,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    entrypoint: python3 /opt/app/distance_calculator.py
     environment:
       - INPUT_QUEUE=distance_calc_in
       - OUTPUT_QUEUE=distance
@@ -363,7 +334,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    entrypoint: python3 /opt/app/dist_mean_calculator.py
     environment:
       - INPUT_QUEUE=distance
       - OUTPUT_QUEUE=distance_mean
@@ -377,7 +347,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    entrypoint: python3 /opt/app/dist_mean_calculator.py
     environment:
       - INPUT_QUEUE=distance
       - OUTPUT_QUEUE=distance_mean
@@ -391,7 +360,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    entrypoint: python3 /opt/app/dist_mean_provider.py
     environment:
       - INPUT_QUEUE=distance_mean
       - OUTPUT_QUEUE=dist_mean_provider
@@ -405,7 +373,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    entrypoint: python3 /opt/app/dist_mean_provider.py
     environment:
       - INPUT_QUEUE=distance_mean
       - OUTPUT_QUEUE=dist_mean_provider
@@ -419,13 +386,12 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    entrypoint: python3 /opt/app/year_filter.py
     environment:
       - INPUT_QUEUE=year_filter_in
       - OUTPUT_QUEUE=year_filtered
       - OUTPUT_AMOUNT=2
       - REPLICA_ID=0
-
+  
   year_filter_1:
     build:
       context: ./containers
@@ -433,7 +399,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    entrypoint: python3 /opt/app/year_filter.py
     environment:
       - INPUT_QUEUE=year_filter_in
       - OUTPUT_QUEUE=year_filtered
@@ -447,7 +412,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    entrypoint: python3 /opt/app/trips_counter.py
     environment:
       - INPUT_QUEUE=year_filtered
       - OUTPUT_QUEUE=trips_counted
@@ -461,7 +425,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    entrypoint: python3 /opt/app/trips_counter.py
     environment:
       - INPUT_QUEUE=year_filtered
       - OUTPUT_QUEUE=trips_counted
@@ -475,7 +438,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    entrypoint: python3 /opt/app/trip_count_provider.py
     environment:
       - INPUT_QUEUE=trips_counted
       - OUTPUT_QUEUE=trip_count_provider
@@ -489,7 +451,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    entrypoint: python3 /opt/app/trip_count_provider.py
     environment:
       - INPUT_QUEUE=trips_counted
       - OUTPUT_QUEUE=trip_count_provider

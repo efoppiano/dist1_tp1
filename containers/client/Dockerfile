@@ -1,7 +1,8 @@
 FROM python
 RUN pip3 install pika
+RUN pip3 install pyzmq
 
-COPY dist_mean_provider/dist_mean_provider.py /opt/app/dist_mean_provider.py
+COPY client/client.py /opt/app/client.py
 COPY common /opt/app/common
 
 ENTRYPOINT ["/bin/bash"]

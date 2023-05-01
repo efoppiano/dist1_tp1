@@ -5,12 +5,11 @@ from datetime import timedelta
 from typing import List, Dict
 
 from common.basic_aggregator import BasicAggregator
-from common.packets.eof import Eof
 from common.packets.gateway_in import GatewayIn
 from common.packets.gateway_out import GatewayOut
 from common.packets.weather_side_table_info import WeatherSideTableInfo
 from common.utils import initialize_log, build_prefixed_queue_name, build_prefixed_hashed_queue_name, \
-    build_eof_in_queue_name
+    build_eof_in_queue_name, parse_date
 
 CITY_NAME = os.environ["CITY_NAME"]
 INPUT_QUEUE_SUFFIX = os.environ["INPUT_QUEUE_SUFFIX"]
@@ -35,7 +34,8 @@ class WeatherAggregator(BasicAggregator):
 
     def handle_side_table_message(self, message: bytes):
         packet = WeatherSideTableInfo.decode(message)
-        yesterday = (packet.date - timedelta(days=1)).date()
+        date = parse_date(packet.date)
+        yesterday = (date - timedelta(days=1)).date()
         yesterday = yesterday.strftime("%Y-%m-%d")
         self._weather[yesterday] = packet.prectot
 
@@ -43,14 +43,16 @@ class WeatherAggregator(BasicAggregator):
         logging.info("Received EOF")
         output_queue = build_eof_in_queue_name(self._city_name, self._output_queue_suffix)
         return {
-            output_queue: [Eof().encode()]
+            output_queue: ["".encode()]
         }
 
     def handle_message(self, message: bytes) -> Dict[str, List[bytes]]:
         packet = GatewayIn.decode(message)
 
         if packet.start_date in self._weather:
-            output_packet = GatewayOut.from_gateway_in(packet, self._weather[packet.start_date])
+            output_packet = GatewayOut(packet.start_date, packet.start_station_code, packet.end_station_code,
+                                       packet.duration_sec, packet.yearid, self._weather[packet.start_date])
+
             output_queue = build_prefixed_hashed_queue_name(self._city_name, self._output_queue_suffix,
                                                             packet.start_date,
                                                             self._output_amount)
@@ -58,7 +60,8 @@ class WeatherAggregator(BasicAggregator):
                 output_queue: [output_packet.encode()]
             }
         else:
-            raise ValueError(f"Could not find weather for {packet.start_date}. data: {self._weather}")
+            logging.warning(f"Could not find weather for {packet.start_date}.")
+            return {}
 
 
 def main():

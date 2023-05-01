@@ -129,6 +129,7 @@ dmypy.json
 .pyre/
 
 # Datasets
+.data_2/
 .data/
 
 .idea/

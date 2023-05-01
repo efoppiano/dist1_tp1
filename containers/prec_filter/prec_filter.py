@@ -23,10 +23,9 @@ class PrecFilter(BasicFilter):
         self._output_amount = int(config["output_amount"])
 
     def handle_eof(self, message: bytes) -> Dict[str, List[bytes]]:
-        city_name = message.decode("utf-8")
         eof_output_queue = build_eof_in_queue_name(self._output_queue)
         return {
-            eof_output_queue: [Eof(city_name).encode()]
+            eof_output_queue: [message]
         }
 
     def handle_message(self, message: bytes) -> Dict[str, List[bytes]]:

@@ -10,6 +10,7 @@ def initialize_log(logging_level):
     Current timestamp is added to be able to identify in docker
     compose logs the date when the log has arrived
     """
+    logging.getLogger("pika").setLevel(logging.WARNING)
     logging.basicConfig(
         format='%(asctime)s %(levelname)-8s %(message)s',
         level=logging_level,
@@ -53,6 +54,10 @@ def build_eof_out_queue_name(prefix: str, suffix: Union[str, None] = None) -> st
 
 def parse_date(date_str: str) -> date:
     return datetime.strptime(date_str, "%Y-%m-%d")
+
+
+def datetime_str_to_date_str(datetime_str: str) -> str:
+    return datetime_str.split(" ")[0]
 
 
 def json_serial(obj):
