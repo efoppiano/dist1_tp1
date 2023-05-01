@@ -3,21 +3,21 @@
 ## Tabla de contenidos
 
 * [Documentación](#documentación)
-    * [Scope](#scope)
-    * [Software Architecture](#software-architecture)
-    * [Architectural goals & Constraints](#architectural-goals-&-constraints)
-    * [Scenarios](#scenarios)
-    * [Logical View](#logical-view)
+    * [Alcance](#alcance)
+    * [Arquitectura de Software](#arquitectura-de-software)
+    * [Objetivos y limitaciones arquitectónicas](#objetivos-y-limitaciones-arquitectónicas)
+    * [Escenarios](#escenarios)
+    * [Vista Lógica](#vista-lógica)
         * [DAG](#dag)
-    * [Physical View](#physical-view)
+    * [Vista Física](#vista-física)
         * [Diagrama de robustez](#diagrama-de-robustez)
         * [Diagrama de despliegue](#diagrama-de-despliegue)
-    * [Process View](#process-view)
+    * [Vista de Procesos](#vista-de-procesos)
         * [Diagrama de actividad](#diagrama-de-actividad)
 
 ## Documentación
 
-### Scope
+### Alcance
 
 El proyecto consiste en un sistema distribuido que analice los registros de viajes
 realizados con bicicletas de la red pública provista por grandes ciudades.
@@ -31,25 +31,25 @@ Se deben generar los siguientes reportes:
 - Los nombres de estaciones de Montreal para la que el promedio de
   los ciclistas recorren más de 6km en llegar a ellas.
 
-### Software Architecture
+### Arquitectura de Software
 
 La arquitectura es de tipo cliente-servidor, donde el servidor consiste en
 diferentes entidades, comunicadas entre sí mediante el broker de mensajes
 RabbitMQ.
 
-### Architectural goals & Constraints
+### Objetivos y limitaciones arquitectónicas
 
 - **Escalabilidad**: Se debe soportar el incremento de los elementos de cómputo para
   escalar los volúmenes de información a procesar.
 - **Mantenibilidad**: La comunicación de grupos debe encapsularse en un middleware.
 
-### Scenarios
+### Escenarios
 
 ![use_cases](docs/use_cases.png)
 
 Diagrama de casos de uso del sistema.
 
-### Logical View
+### Vista Lógica
 
 #### DAG
 
@@ -72,13 +72,13 @@ La información de las side tables se ingresa al sistema mediante un mecanismo d
 permitir que varias réplicas de los aggregators puedan construir sus side tables.
 Esto favorece la escalabilidad del sistema, a costa de duplicar la información en cada réplica.
 
-### Physical View
+### Vista Física
 
 #### Diagrama de robustez
 
 ![robustness_diagram_1](docs/robustness_1.png)
 
-Diagrama de robustez del sistema.
+Diagrama de robustez simplificado
 
 Como se puede ver, varias entidades del sistema pueden ser replicadas, para permitir un escalado
 horizontal.
@@ -109,7 +109,7 @@ los diferentes componentes del sistema.
 Para alivianar la carga del broker, el cliente y el Gateway se comunican directamente entre sí.
 Cada nodo puede desplegarse de manera independiente.
 
-### Process View
+### Vista de Procesos
 
 #### Diagrama de actividad
 
@@ -134,6 +134,5 @@ la información de las estaciones y el clima, hasta que se envía al primer conj
 Se ve que, tanto el `Prec Filter` como el `Distance Calculator`, pueden realizar su trabajo utilizando
 exclusivamente la información del paquete que acaban de recibir, por lo que el escalado de éstas entidades
 es muy sencillo.
-
 
 
