@@ -16,7 +16,6 @@ class Rabbit(MessageQueue):
         self.connection = pika.BlockingConnection(
             pika.ConnectionParameters(host=host))
         self._channel = self.connection.channel()
-        self._channel.basic_qos(prefetch_count=1)
         self._declared_exchanges = []
         self._declared_queues = []
         self._consume_one_last_queue = None
@@ -84,8 +83,9 @@ class Rabbit(MessageQueue):
 
     def consume_one(self, queue: str, callback: Callable[[bytes], bool]):
         if queue != self._consume_one_last_queue:
+            if self._consume_one_last_queue is not None:
+                self._channel.cancel()
             self._consume_one_last_queue = queue
-            self._channel.cancel()
 
         self.declare_queue(queue)
         for (method, _, msg) in self._channel.consume(queue=queue, auto_ack=False):

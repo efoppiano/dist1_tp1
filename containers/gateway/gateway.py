@@ -99,7 +99,6 @@ class Gateway:
         try:
             while True:
                 message = bytes(socket.recv())
-
                 PacketFactory.handle_packet(message,
                                             self.__handle_weather_packet,
                                             self.__handle_station_packet,

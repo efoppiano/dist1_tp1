@@ -80,8 +80,8 @@ class BasicClient(ABC):
     def __send_data_from_city(self, city: str):
         logging.info(f"action: client_send_data | result: in_progress | city: {city}")
         push_socket = self._context.socket(zmq.PUSH)
-        push_socket.connect(self._push_addr)
         push_socket.setsockopt(zmq.LINGER, 0)
+        push_socket.connect(self._push_addr)
 
         try:
             self.__send_weather_data(push_socket, city)
@@ -93,12 +93,12 @@ class BasicClient(ABC):
         except Exception as e:
             logging.error(f"action: client_send_data | result: error | city: {city} | error: {e}")
         finally:
-            push_socket.close()
+            push_socket.close(-1)
 
     def __send_cities_data(self):
         threads = []
         for city in self._all_cities:
-            thread = threading.Thread(target=self.__send_data_from_city(city))
+            thread = threading.Thread(target=self.__send_data_from_city, args=(city,))
             threads.append(thread)
             thread.start()
 

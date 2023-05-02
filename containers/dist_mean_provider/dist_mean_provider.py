@@ -4,7 +4,6 @@ import os
 from typing import Dict, List
 
 from common.basic_filter import BasicFilter
-from common.packets.eof import Eof
 from common.packets.station_dist_mean import StationDistMean
 from common.utils import initialize_log, build_eof_in_queue_name
 

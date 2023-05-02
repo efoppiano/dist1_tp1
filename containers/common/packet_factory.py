@@ -54,7 +54,7 @@ class PacketFactory:
 
     @staticmethod
     def handle_packet(data: bytes, weather_callback, station_callback, trip_callback):
-        decoded = json.loads(data.decode())
+        decoded = json.loads(data)
         packet_type = decoded["type"]
         payload = decoded["payload"]
         if packet_type == "weather":

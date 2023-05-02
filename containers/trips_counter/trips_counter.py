@@ -28,8 +28,7 @@ class TripsCounter(BasicFilter):
 
     def handle_eof(self, message: bytes) -> Dict[str, List[bytes]]:
         city_name = message.decode()
-        output = OrderedDict()
-        logging.info(f"action: trips_counter_handle_eof | city_name: {city_name} | data: {self._buffer}")
+        output = {}
         self._buffer.setdefault(city_name, {})
         for start_station_name, data in self._buffer[city_name].items():
             queue = build_hashed_queue_name(self._output_queue,
@@ -41,8 +40,7 @@ class TripsCounter(BasicFilter):
                                                         data[2016],
                                                         data[2017]).encode())
 
-        logging.info(f"action: trips_counter_send_data | city_name: {city_name} | data: {output}")
-        # self._buffer.pop(city_name)
+        self._buffer.pop(city_name)
         eof_output_queue = build_eof_in_queue_name(self._output_queue)
         output[eof_output_queue] = [message]
         return output

@@ -11,9 +11,15 @@
         * [DAG](#dag)
     * [Vista Física](#vista-física)
         * [Diagrama de robustez](#diagrama-de-robustez)
+        * [Sincronización de EOFs](#sincronización-de-eofs)
         * [Diagrama de despliegue](#diagrama-de-despliegue)
     * [Vista de Procesos](#vista-de-procesos)
         * [Diagrama de actividad](#diagrama-de-actividad)
+        * [Diagrama de secuencia](#diagrama-de-secuencia)
+    * [Vista de Desarrollo](#vista-de-desarrollo)
+        * [Diagrama de paquetes](#diagrama-de-paquetes)
+    * [Vista Lógica](#vista-lógica)
+        * [Diagrama de clases](#diagrama-de-clases)
 
 ## Documentación
 
@@ -33,9 +39,9 @@ Se deben generar los siguientes reportes:
 
 ### Arquitectura de Software
 
-La arquitectura es de tipo cliente-servidor, donde el servidor consiste en
-diferentes entidades, comunicadas entre sí mediante el broker de mensajes
-RabbitMQ.
+La arquitectura consiste en un cliente, que se comunica con un sistema distribuido
+mediante sockets ZMQ. El sistema procesa la información recibida utilizando RabbitMQ como
+broker de mensajes.
 
 ### Objetivos y limitaciones arquitectónicas
 
@@ -76,27 +82,58 @@ Esto favorece la escalabilidad del sistema, a costa de duplicar la información 
 
 #### Diagrama de robustez
 
-![robustness_diagram_1](docs/robustness_1.png)
+![robustness_diagram_1](docs/robustness_simple.png)
 
 Diagrama de robustez simplificado
 
 Como se puede ver, varias entidades del sistema pueden ser replicadas, para permitir un escalado
 horizontal.
 
-Algunas entidades poseen el estereotipo `<<City Affinity>>`. Esto quiere decir que, para dicha entidad,
-existirá un nodo por cada ciudad. Por ejemplo, se deben desplegar tres instancias de `Dist Mean Calculator`.
+El cliente se comunica con el sistema a través de dos endpoints: uno para enviar la información (`Gateway`),
+y otro para recibir los reportes (`Result Provider`). En ambos casos, la comunicación se realiza mediante
+sockets ZMQ.
+Dentro del sistema `Bike Rides Analyzer`, la comunicación se realiza mediante RabbitMQ.
 
-Los aggregators, ademas de tener affinity con una ciudad, pueden replicarse. Por ejemplo, pueden desplegarse
+Algunas entidades poseen el estereotipo `<<City Affinity>>`. Esto quiere decir que, para dicha entidad,
+existirá un nodo por cada ciudad. Por ejemplo, se deben desplegar tres instancias de `Weather Aggregator`.
+
+Los aggregators, además de tener affinity con una ciudad, pueden replicarse. Por ejemplo, pueden desplegarse
 3 `Weather Aggregator` para Washington, y 2 `Weather Aggregator` para Montreal.
 
-![robustness_diagram_2](docs/robustness_2.png)
+![robustness_query_1](docs/robustness_query_1.png)
 
-Diagrama de robustez del servidor, con información de cada una de las queues.
+![robustness_query_2](docs/robustness_query_2.png)
 
-En el diagrama anterior se observa la forma en que se distribuyen los mensajes entre los distintos
+![robustness_query_3](docs/robustness_query_3.png)
+
+Diagramas de robustez detallados, con información de las queues que se utilizan para comunicar las distintas
+etapas del pipeline.
+
+En los anteriores se observa la forma en que se distribuyen los mensajes entre los distintos
 componentes del sistema. Además, se puede ver el mecanismo por el cual se dividen los mensajes en aquellos
 nodos que poseen `<<City Affinity>>`: el nombre de la queue inicia con el nombre de la ciudad, seguido de un
-guión bajo.
+guion bajo.
+
+Por otro lado, se puede observar la forma en que se distribuye el trabajo entre las diferentes réplicas de
+cada nodo. Cada réplica tiene su propia queue, y se utiliza una función de hashing para determinar a qué
+réplica se le envía cada mensaje.
+
+#### Sincronización de EOFs
+
+![synchronizer](docs/synchronizer.png)
+
+Diagrama de sincronización entre las distintas etapas del pipeline.
+
+Para evitar condiciones de carrera al momento de recibir un EOF de parte del cliente, se definió un
+nodo `Synchronizer`. Cuando una réplica de un nodo recibe un EOF, envía un mensaje al Synchronizer.
+Una vez que el Synchronizer recibe un EOF de cada réplica, envía un EOF a todas las réplicas de la
+siguiente etapa del pipeline. Este mensaje se envía a la misma queue que se utiliza para enviar los
+datos de procesamiento, por lo que se garantiza que el EOF se encolará luego de que todos los datos
+estén encolados.
+
+Las queues de trabajo están asociadas a dos exchanges: el default, por donde reciben los datos a procesar,
+y el exchange `control`, mediante una routing_key. El Synchronizer envía los EOFs a este exchange, utilizando
+la routing_key correspondiente, para que se encolen en todas las réplicas.
 
 #### Diagrama de despliegue
 
@@ -115,7 +152,8 @@ Cada nodo puede desplegarse de manera independiente.
 
 ![activity_diagram_1](docs/activity_1.png)
 
-Diagrama de actividad de la comunicación entre el cliente, el Gateway y el primer aggregator.
+Diagrama de actividad de la comunicación entre el cliente, el Gateway, el primer aggregator y
+el Synchronizer
 
 En el diagrama anterior se puede observar el orden en que el cliente envía la información al Gateway, y
 el orden en que la esperan los aggregators.
@@ -124,15 +162,71 @@ El `Weather Aggregator` necesita la información climática para armar su side t
 procesar la información de los viajes hasta que no reciba todos los datos del clima.
 Lo mismo sucede con el `Station Aggregator`, que necesita la información de las estaciones.
 
+El cliente envía la información de cada ciudad en un thread separado.
+
 ![activity_diagram_2](docs/activity_2.png)
 
-Diagrama de actividad de la comunicación del `Station Aggregator` con el `Prec Filter` y `Distance Calculator`.
+Diagrama de actividad de la comunicación del `Station Aggregator` con el `Prec Filter` y `Result Provider`.
 
 En el diagrama se visualiza cómo se comunica la información, desde el momento en que se termina de agregar
 la información de las estaciones y el clima, hasta que se envía al primer conjunto de filtros y calculators.
 
-Se ve que, tanto el `Prec Filter` como el `Distance Calculator`, pueden realizar su trabajo utilizando
+Se puede ver que el `Prec Filter` puede realizar su trabajo utilizando
 exclusivamente la información del paquete que acaban de recibir, por lo que el escalado de éstas entidades
-es muy sencillo.
+es muy sencillo. Lo mismo ocurre con `Year Filter`, `Trip Count Provider`, `Distance Calculator` y `Dist Mean Provider`.
+
+El `Result Provider` se encarga de comunicarle al cliente la información de los reportes.
+
+#### Diagrama de secuencia
+
+![sequence_diagram_1](docs/sequence_1.png)
+
+Diagrama de secuencia del envio de datos del cliente al sistema.
+
+En el diagrama se observa con más detalle el camino que recorre la información desde el cliente hasta
+cada uno de los nodos del sistema.
+
+Los mensajes tipo EOF deben ser enviados al Synchronizer, para que los retenga hasta que todas las
+réplicas de un nodo hayan terminado de procesar los datos.
+
+![sequence_diagram_2](docs/sequence_2.png)
+
+Diagrama de secuencia de la obtención de los reportes por parte del cliente.
+
+Para obtener los resultados, el cliente le envía un mensaje al `Result Provider`.
+El `Result Provider`, al recibirlo, toma de la queue correspondiente un mensaje, que es
+reenviado inmediatamente al cliente.
+Si este mensaje es un EOF, el cliente sabe que ya recibió todos los resultados para un
+conjunto dado de (ciudad, reporte)
+
+### Vista de Desarrollo
+
+#### Diagrama de paquetes
+
+![package_diagram](docs/package.png)
+
+Diagrama de paquetes ilustrativo del sistema.
+
+En el diagrama se observa, a modo de ejemplo, la estructura de paquetes del
+`Weather Filter`, aunque es muy similar al resto de los componentes del sistema.
+
+Tanto el `BasicFilter` como el `WeatherFilter` utilizan la abstracción `Rabbit Middleware`
+para no depender de los detalles de implementación de la biblioteca pika.
+
+### Vista Lógica
+
+#### Diagrama de clases
+
+![class_diagram](docs/class.png)
+
+Diagrama de clases de los filtros, aggregators y el synchronizer.
+
+La forma en que se implementan estos tres tipos de componentes es muy similar:
+se define una clase que hereda de `BasicFilter`, `BasicAggregator` o `Synchronizer`,
+y se implementa el método `handle_message`, que se ejecuta cada vez que se recibe un mensaje.
+El retorno de este método es un conjunto de mensajes que se deben enviar a la siguiente etapa.
+
+Esta abstracción permite implementar envio de batches de mensajes desde la clase abstracta, sin
+que las clases concretas tengan que preocuparse por ello.
 
 

@@ -1,4 +1,5 @@
 import json
+import logging
 from dataclasses import dataclass
 from typing import Iterator, Union, List
 
@@ -123,7 +124,11 @@ class WeatherReader:
         with open(self.__weather_path()) as f:
             _ = f.readline()
             for line in f:
-                weather_info = WeatherInfo.from_csv(self._city, line)
+                try:
+                    weather_info = WeatherInfo.from_csv(self._city, line)
+                except ValueError as e:
+                    logging.error(f"action: weather_info_next_data | result: failed | error: {e}")
+                    continue
                 yield weather_info
 
 
@@ -139,7 +144,11 @@ class StationReader:
         with open(self.__station_path()) as f:
             _ = f.readline()
             for line in f:
-                station_info = StationInfo.from_csv(self._city, line)
+                try:
+                    station_info = StationInfo.from_csv(self._city, line)
+                except ValueError as e:
+                    logging.error(f"action: station_info_next_data | result: failed | error: {e}")
+                    continue
                 yield station_info
 
 
@@ -156,7 +165,11 @@ class TripReader:
             _ = f.readline()
             trip_info_list = []
             for line in f:
-                trip_info = TripInfo.from_csv(self._city, line)
+                try:
+                    trip_info = TripInfo.from_csv(self._city, line)
+                except ValueError as e:
+                    logging.error(f"action: trip_info_next_data | result: failed | error: {e}")
+                    continue
                 trip_info_list.append(trip_info)
                 if len(trip_info_list) == CHUNK_SIZE:
                     yield trip_info_list

@@ -50,15 +50,22 @@ class SimpleStationAggregator(BasicAggregator):
             eof_prec_filter_in_queue: [self._city_name.encode()]
         }
 
-    def __assert_station_name_exists(self, station_code: int, yearid: int):
+    def __check_station_name_exists(self, station_code: int, yearid: int) -> bool:
         if (station_code, yearid) not in self._stations:
-            raise ValueError(f"Station name not found for station code {station_code} and yearid {yearid}")
+            logging.warning(f"Station name not found for station code {station_code} and yearid {yearid}")
+            return False
+        return True
 
     def handle_message(self, message: bytes) -> Dict[str, List[bytes]]:
         packet = GatewayOut.decode(message)
 
-        self.__assert_station_name_exists(packet.start_station_code, packet.yearid)
-        self.__assert_station_name_exists(packet.end_station_code, packet.yearid)
+        check_1 = self.__check_station_name_exists(packet.start_station_code,
+                                                   packet.yearid)
+        check_2 = self.__check_station_name_exists(packet.end_station_code,
+                                                   packet.yearid)
+
+        if not check_1 or not check_2:
+            return {}
 
         start_station_name = self._stations[(packet.start_station_code, packet.yearid)]
 
