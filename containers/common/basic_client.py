@@ -181,7 +181,7 @@ class BasicClient(ABC):
         except Exception as e:
             logging.error(f"action: client_get_responses | result: error | error: {e}")
         finally:
-            req_socket.close()
+            req_socket.close(-1)
 
     def __run(self):
         self.__send_cities_data()
