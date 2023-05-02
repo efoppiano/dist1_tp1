@@ -1,9 +1,6 @@
 SHELL := /bin/bash
 PWD := $(shell pwd)
 
-include .env
-export
-
 default: build
 
 all:
@@ -27,3 +24,7 @@ docker-compose-logs:
 docker-compose-ps:
 	docker compose -f docker-compose-dev.yaml ps
 .PHONY: docker-compose-ps
+
+client-logs:
+	docker compose -f docker-compose-dev.yaml logs client
+.PHONY: client-logs
