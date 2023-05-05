@@ -1,5 +1,4 @@
 import json
-import logging
 from dataclasses import dataclass
 from typing import Iterator, Union, List
 
@@ -58,7 +57,7 @@ class StationInfo:
 
     @staticmethod
     def decode(data: bytes) -> "StationInfo":
-        decoded = json.loads(data.decode())
+        decoded = json.loads(data)
         return StationInfo(**decoded)
 
     @staticmethod
@@ -127,7 +126,6 @@ class WeatherReader:
                 try:
                     weather_info = WeatherInfo.from_csv(self._city, line)
                 except ValueError as e:
-                    logging.error(f"action: weather_info_next_data | result: failed | error: {e}")
                     continue
                 yield weather_info
 
@@ -147,7 +145,6 @@ class StationReader:
                 try:
                     station_info = StationInfo.from_csv(self._city, line)
                 except ValueError as e:
-                    logging.error(f"action: station_info_next_data | result: failed | error: {e}")
                     continue
                 yield station_info
 
@@ -168,7 +165,6 @@ class TripReader:
                 try:
                     trip_info = TripInfo.from_csv(self._city, line)
                 except ValueError as e:
-                    logging.error(f"action: trip_info_next_data | result: failed | error: {e}")
                     continue
                 trip_info_list.append(trip_info)
                 if len(trip_info_list) == CHUNK_SIZE:

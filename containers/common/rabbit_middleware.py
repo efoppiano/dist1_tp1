@@ -12,7 +12,7 @@ class Rabbit(MessageQueue):
 
     def __init__(self, host: str):
         self.connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host=host))
+            pika.ConnectionParameters(host=host, heartbeat=0))
         self._channel = self.connection.channel()
         self._declared_exchanges = []
         self._declared_queues = []
