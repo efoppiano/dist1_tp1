@@ -30,7 +30,7 @@ class DistMeanProvider(BasicFilter):
         packet = StationDistMean.decode(message)
 
         output = {}
-        if packet.dist_mean > self._mean_threshold:
+        if packet.dist_mean >= self._mean_threshold:
             output[self._output_queue] = [message]
 
         return output

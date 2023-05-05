@@ -1,5 +1,4 @@
 import json
-import logging
 from typing import List
 
 from common.readers import WeatherInfo, StationInfo, TripInfo

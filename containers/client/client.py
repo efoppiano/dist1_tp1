@@ -1,6 +1,5 @@
 import logging
 import os
-import time
 from typing import Iterator, List
 
 from common.basic_client import BasicClient
@@ -48,7 +47,7 @@ class Client(BasicClient):
     def handle_station_dist_mean_packet(self, packet: StationDistMean):
         logging.info(
             f"action: receive_dist_mean_packet | result: success | city: {packet.city_name} |"
-            f" start_station_name: {packet.start_station_name} | dist_mean (km): {packet.dist_mean}")
+            f" end_station_name: {packet.end_station_name} | dist_mean (km): {packet.dist_mean}")
 
 
 def main():

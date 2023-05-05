@@ -6,7 +6,6 @@ from typing import Dict, List
 import yaml
 
 from common.basic_synchronizer import BasicSynchronizer
-from common.packets.eof import Eof
 from common.utils import initialize_log
 
 

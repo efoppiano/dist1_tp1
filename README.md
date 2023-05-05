@@ -2,6 +2,10 @@
 
 ## Tabla de contenidos
 
+* [Ejecución](#ejecución)
+    * [Requisitos](#requisitos)
+    * [Ejecución del sistema](#ejecución-del-sistema)
+    * [Visualización de los reportes en tiempo real](#visualización-de-los-reportes-en-tiempo-real)
 * [Documentación](#documentación)
     * [Alcance](#alcance)
     * [Arquitectura de Software](#arquitectura-de-software)
@@ -20,6 +24,43 @@
         * [Diagrama de paquetes](#diagrama-de-paquetes)
     * [Vista Lógica](#vista-lógica)
         * [Diagrama de clases](#diagrama-de-clases)
+
+## Ejecución
+
+### Requisitos
+
+Para ejecutar el sistema, se debe crear una carpeta `.data` en la raíz del proyecto, y colocar
+las carpetas con los archivos de cada ciudad (`trips.csv`, `stations.csv`, `weather.csv`).
+
+El directorio debe tener la siguiente estructura:
+
+```
+.data
+├── montreal
+│   ├── stations.csv
+│   ├── trips.csv
+│   └── weather.csv
+├── toronto
+│   ├── stations.csv
+│   ├── trips.csv
+│   └── weather.csv
+└── washington
+    ├── stations.csv
+    ├── trips.csv
+    └── weather.csv
+```
+
+### Ejecución del sistema
+
+```bash
+make docker-compose-up
+```
+
+### Visualización de los reportes en tiempo real
+
+```bash
+make client-logs-live
+```
 
 ## Documentación
 
@@ -131,10 +172,6 @@ siguiente etapa del pipeline. Este mensaje se envía a la misma queue que se uti
 datos de procesamiento, por lo que se garantiza que el EOF se encolará luego de que todos los datos
 estén encolados.
 
-Las queues de trabajo están asociadas a dos exchanges: el default, por donde reciben los datos a procesar,
-y el exchange `control`, mediante una routing_key. El Synchronizer envía los EOFs a este exchange, utilizando
-la routing_key correspondiente, para que se encolen en todas las réplicas.
-
 #### Diagrama de despliegue
 
 ![deployment_diagram](docs/deployment.png)
@@ -143,7 +180,7 @@ Diagrama de despliegue del sistema.
 
 Este diagrama pone en evidencia la fuerte dependencia que existe entre RabbitMQ (Message Queue) y
 los diferentes componentes del sistema.
-Para alivianar la carga del broker, el cliente y el Gateway se comunican directamente entre sí.
+Para alivianar la carga del broker, el cliente se comunica directamente con el Gateway y el Result Provider.
 Cada nodo puede desplegarse de manera independiente.
 
 ### Vista de Procesos
@@ -152,8 +189,7 @@ Cada nodo puede desplegarse de manera independiente.
 
 ![activity_diagram_1](docs/activity_1.png)
 
-Diagrama de actividad de la comunicación entre el cliente, el Gateway, el primer aggregator y
-el Synchronizer
+Diagrama de actividad de la comunicación entre el cliente, el Gateway y el primer aggregator
 
 En el diagrama anterior se puede observar el orden en que el cliente envía la información al Gateway, y
 el orden en que la esperan los aggregators.
@@ -181,10 +217,12 @@ El `Result Provider` se encarga de comunicarle al cliente la información de los
 
 ![sequence_diagram_1](docs/sequence_1.png)
 
-Diagrama de secuencia del envio de datos del cliente al sistema.
+Diagrama de secuencia de un posible envio de datos del cliente al sistema.
 
 En el diagrama se observa con más detalle el camino que recorre la información desde el cliente hasta
-cada uno de los nodos del sistema.
+cada uno de los nodos del sistema. A modo de ejemplo, se enviaron solo dos mensajes con información
+de clima, uno de estaciones y uno de viajes, junto con los EOFs correspondientes.
+En un caso real, se enviarían muchos más mensajes de tipo `data`.
 
 Los mensajes tipo EOF deben ser enviados al Synchronizer, para que los retenga hasta que todas las
 réplicas de un nodo hayan terminado de procesar los datos.
@@ -217,7 +255,11 @@ para no depender de los detalles de implementación de la biblioteca pika.
 
 #### Diagrama de clases
 
-![class_diagram](docs/class.png)
+![class_diagram_1](docs/class_1.png)
+
+![class_diagram_2](docs/class_2.png)
+
+![class_diagram_3](docs/class_3.png)
 
 Diagrama de clases de los filtros, aggregators y el synchronizer.
 

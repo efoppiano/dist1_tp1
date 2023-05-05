@@ -1,15 +1,12 @@
 #!/usr/bin/env python3
 import logging
 import os
-from collections import OrderedDict
 from typing import Dict, List
 
 from common.basic_filter import BasicFilter
-from common.packets.eof import Eof
 from common.packets.trips_count_by_year_joined import TripsCountByYearJoined
 from common.packets.year_filter_in import YearFilterIn
-from common.utils import initialize_log, build_queue_name, build_prefixed_queue_name, \
-    build_hashed_queue_name, build_eof_in_queue_name
+from common.utils import initialize_log, build_hashed_queue_name, build_eof_in_queue_name
 
 INPUT_QUEUE = os.environ["INPUT_QUEUE"]
 OUTPUT_QUEUE = os.environ["OUTPUT_QUEUE"]
@@ -31,6 +28,8 @@ class TripsCounter(BasicFilter):
         output = {}
         self._buffer.setdefault(city_name, {})
         for start_station_name, data in self._buffer[city_name].items():
+            if data[2016] == 0:
+                continue
             queue = build_hashed_queue_name(self._output_queue,
                                             start_station_name,
                                             self._output_amount)

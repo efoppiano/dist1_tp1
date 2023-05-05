@@ -5,7 +5,6 @@ from typing import Dict, List
 
 from common.basic_aggregator import BasicAggregator
 from common.packets.distance_calc_in import DistanceCalcIn
-from common.packets.eof import Eof
 from common.packets.full_station_side_table_info import FullStationSideTableInfo
 from common.packets.gateway_out import GatewayOut
 from common.packets.prec_filter_in import PrecFilterIn

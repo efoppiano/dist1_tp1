@@ -8,8 +8,7 @@ from common.basic_filter import BasicFilter
 from common.packets.dist_info import DistInfo
 from common.packets.distance_calc_in import DistanceCalcIn
 from common.packets.eof import Eof
-from common.utils import initialize_log, build_prefixed_queue_name, build_queue_name, build_hashed_queue_name, \
-    build_eof_in_queue_name
+from common.utils import initialize_log, build_hashed_queue_name, build_eof_in_queue_name
 
 INPUT_QUEUE = os.environ["INPUT_QUEUE"]
 OUTPUT_QUEUE = os.environ["OUTPUT_QUEUE"]
@@ -34,7 +33,7 @@ class DistanceCalculator(BasicFilter):
         packet = DistanceCalcIn.decode(message)
 
         output_queue = build_hashed_queue_name(self._output_queue,
-                                               packet.start_station_name,
+                                               packet.end_station_name,
                                                self._output_amount)
         distance = self.__calculate_distance(packet.start_station_latitude,
                                              packet.start_station_longitude,
@@ -42,7 +41,7 @@ class DistanceCalculator(BasicFilter):
                                              packet.end_station_longitude)
         return {
             output_queue: [DistInfo(packet.city_name,
-                                    packet.start_station_name,
+                                    packet.end_station_name,
                                     distance).encode()]
         }
 

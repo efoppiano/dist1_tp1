@@ -1,5 +1,4 @@
 import abc
-import base64
 import json
 import logging
 import os

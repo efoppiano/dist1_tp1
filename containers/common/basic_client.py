@@ -2,7 +2,6 @@ import json
 import logging
 import signal
 import threading
-import time
 from abc import ABC, abstractmethod
 from typing import List, Iterator
 

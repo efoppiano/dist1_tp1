@@ -28,3 +28,7 @@ docker-compose-ps:
 client-logs:
 	docker compose -f docker-compose-dev.yaml logs client
 .PHONY: client-logs
+
+client-logs-live:
+	docker compose -f docker-compose-dev.yaml logs client -f
+.PHONY: client-logs-live

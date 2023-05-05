@@ -5,9 +5,8 @@ from typing import Dict, List
 
 from common.basic_filter import BasicFilter
 from common.packets.dur_avg_out import DurAvgOut
-from common.packets.eof import Eof
 from common.packets.prec_filter_in import PrecFilterIn
-from common.utils import initialize_log, build_queue_name, build_eof_in_queue_name
+from common.utils import initialize_log, build_eof_in_queue_name
 
 INPUT_QUEUE = os.environ["INPUT_QUEUE"]
 OUTPUT_QUEUE = os.environ["OUTPUT_QUEUE"]

@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 import logging
 import os
-import signal
-import time
 from typing import Dict, List
 
 from common.basic_filter import BasicFilter
-from common.packets.eof import Eof
 from common.packets.year_filter_in import YearFilterIn
-from common.utils import initialize_log, build_hashed_queue_name, build_queue_name, build_eof_in_queue_name
+from common.utils import initialize_log, build_hashed_queue_name, build_eof_in_queue_name
 
 INPUT_QUEUE = os.environ["INPUT_QUEUE"]
 OUTPUT_QUEUE = os.environ["OUTPUT_QUEUE"]

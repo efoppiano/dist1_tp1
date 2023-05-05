@@ -4,7 +4,6 @@ import os
 from typing import Dict, List
 
 from common.basic_aggregator import BasicAggregator
-from common.packets.eof import Eof
 from common.packets.gateway_out import GatewayOut
 from common.packets.basic_station_side_table_info import BasicStationSideTableInfo
 from common.packets.prec_filter_in import PrecFilterIn
